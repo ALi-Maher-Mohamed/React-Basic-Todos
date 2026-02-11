@@ -1,3 +1,5 @@
+import ThemeToggle from "./components/ThemeToggle";
+import TodoItem from "./components/TodoItem";
 import { useState, useRef, useCallback, useEffect } from "react";
 import "./App.css";
 
@@ -5,30 +7,24 @@ function App() {
   const [theme, setTheme] = useState(
     () => localStorage.getItem("theme") || "light",
   );
+  const [todos, setTodos] = useState(() => {
+    const saved = localStorage.getItem("todos");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [inputValue, setInputValue] = useState("");
+  const inputRef = useRef(null);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggleTheme = () =>
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
-
-  const [todos, setTodos] = useState(() => {
-    try {
-      const saved = localStorage.getItem("todos");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [inputValue, setInputValue] = useState("");
-  const inputRef = useRef(null);
-
   useEffect(() => {
     localStorage.setItem("todos", JSON.stringify(todos));
   }, [todos]);
+
+  const toggleTheme = () =>
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
 
   const handleAddTodo = useCallback(() => {
     const trimmedText = inputValue.trim();
@@ -36,13 +32,11 @@ function App() {
       inputRef.current?.focus();
       return;
     }
-
     const newTodo = {
       id: crypto.randomUUID(),
       text: trimmedText,
       completed: false,
     };
-
     setTodos((prev) => [newTodo, ...prev]);
     setInputValue("");
     inputRef.current?.focus();
@@ -50,30 +44,16 @@ function App() {
 
   const handleToggleComplete = (id) => {
     setTodos((prev) =>
-      prev.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo,
-      ),
+      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
     );
   };
 
-  const handleDelete = (id) => {
-    setTodos((prev) => prev.filter((todo) => todo.id !== id));
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") handleAddTodo();
-  };
+  const handleDelete = (id) =>
+    setTodos((prev) => prev.filter((t) => t.id !== id));
 
   return (
     <div className="app-container">
-      {/* Theme Button */}
-      <button
-        className="theme-toggle"
-        onClick={toggleTheme}
-        title="Switch Theme"
-      >
-        {theme === "light" ? "🌙" : "☀️"}
-      </button>
+      <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
 
       <div className="todo-app">
         <h1>Task Master</h1>
@@ -84,9 +64,8 @@ function App() {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onKeyDown={(e) => e.key === "Enter" && handleAddTodo()}
             placeholder="Add a new task..."
-            autoFocus
           />
           <button className="add-btn" onClick={handleAddTodo}>
             Add
@@ -95,27 +74,24 @@ function App() {
 
         <div className="todos-list">
           {todos.length === 0 ? (
-            <p style={{ textAlign: "center", opacity: 0.6, padding: "1rem" }}>
+            <p
+              style={{
+                textAlign: "center",
+                opacity: 0.6,
+                color: "var(--stats-text)",
+              }}
+            >
               No tasks for today. Relax! ☕
             </p>
           ) : (
             <ul>
               {todos.map((todo) => (
-                <li key={todo.id} className={todo.completed ? "completed" : ""}>
-                  <div
-                    className="todo-text"
-                    onClick={() => handleToggleComplete(todo.id)}
-                  >
-                    {todo.completed ? "✓ " : "○ "}
-                    {todo.text}
-                  </div>
-                  <button
-                    className="delete-btn"
-                    onClick={() => handleDelete(todo.id)}
-                  >
-                    ×
-                  </button>
-                </li>
+                <TodoItem
+                  key={todo.id}
+                  todo={todo}
+                  onToggle={handleToggleComplete}
+                  onDelete={handleDelete}
+                />
               ))}
             </ul>
           )}
@@ -129,7 +105,6 @@ function App() {
         )}
       </div>
 
-      {/* Your Branding Footer */}
       <footer className="footer">
         Designed & Built by <b>Ali Maher</b>
       </footer>
