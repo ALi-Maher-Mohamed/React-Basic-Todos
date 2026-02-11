@@ -2,6 +2,18 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import "./App.css";
 
 function App() {
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("theme") || "light",
+  );
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () =>
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+
   const [todos, setTodos] = useState(() => {
     try {
       const saved = localStorage.getItem("todos");
@@ -14,70 +26,78 @@ function App() {
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef(null);
 
-  // حفظ التودوهات في localStorage كل ما يتغيروا
   useEffect(() => {
     localStorage.setItem("todos", JSON.stringify(todos));
   }, [todos]);
 
   const handleAddTodo = useCallback(() => {
     const trimmedText = inputValue.trim();
-
     if (!trimmedText) {
-      alert("Please enter a valid todo item");
       inputRef.current?.focus();
       return;
     }
 
     const newTodo = {
-      id: crypto.randomUUID(), // أفضل بكتير من index
+      id: crypto.randomUUID(),
       text: trimmedText,
       completed: false,
-      createdAt: Date.now(),
     };
 
-    setTodos((prev) => [newTodo, ...prev]); // إضافة في البداية (أحدث أولاً)
+    setTodos((prev) => [newTodo, ...prev]);
     setInputValue("");
     inputRef.current?.focus();
   }, [inputValue]);
 
-  const handleToggleComplete = useCallback((id) => {
+  const handleToggleComplete = (id) => {
     setTodos((prev) =>
       prev.map((todo) =>
         todo.id === id ? { ...todo, completed: !todo.completed } : todo,
       ),
     );
-  }, []);
+  };
 
-  const handleDelete = useCallback((id) => {
+  const handleDelete = (id) => {
     setTodos((prev) => prev.filter((todo) => todo.id !== id));
-  }, []);
+  };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      handleAddTodo();
-    }
+    if (e.key === "Enter") handleAddTodo();
   };
 
   return (
     <div className="app-container">
+      {/* Theme Button */}
+      <button
+        className="theme-toggle"
+        onClick={toggleTheme}
+        title="Switch Theme"
+      >
+        {theme === "light" ? "🌙" : "☀️"}
+      </button>
+
       <div className="todo-app">
-        <h1>To-Do List</h1>
+        <h1>Task Master</h1>
 
         <div className="input-section">
           <input
             ref={inputRef}
+            type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="What needs to be done?"
+            placeholder="Add a new task..."
             autoFocus
           />
-          <button onClick={handleAddTodo}>Add</button>
+          <button className="add-btn" onClick={handleAddTodo}>
+            Add
+          </button>
         </div>
 
         <div className="todos-list">
           {todos.length === 0 ? (
-            <p className="empty-state">No tasks yet. Add one! ✨</p>
+            <p style={{ textAlign: "center", opacity: 0.6, padding: "1rem" }}>
+              No tasks for today. Relax! ☕
+            </p>
           ) : (
             <ul>
               {todos.map((todo) => (
@@ -85,21 +105,13 @@ function App() {
                   <div
                     className="todo-text"
                     onClick={() => handleToggleComplete(todo.id)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        handleToggleComplete(todo.id);
-                      }
-                    }}
                   >
+                    {todo.completed ? "✓ " : "○ "}
                     {todo.text}
                   </div>
-
                   <button
                     className="delete-btn"
                     onClick={() => handleDelete(todo.id)}
-                    aria-label={`Delete "${todo.text}"`}
                   >
                     ×
                   </button>
@@ -111,10 +123,16 @@ function App() {
 
         {todos.length > 0 && (
           <div className="stats">
-            {todos.filter((t) => t.completed).length} / {todos.length} done
+            {todos.filter((t) => t.completed).length} of {todos.length} tasks
+            completed
           </div>
         )}
       </div>
+
+      {/* Your Branding Footer */}
+      <footer className="footer">
+        Designed & Built by <b>Ali Maher</b>
+      </footer>
     </div>
   );
 }
