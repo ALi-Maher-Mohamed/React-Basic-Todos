@@ -1,57 +1,119 @@
+import { useState, useRef, useCallback, useEffect } from "react";
 import "./App.css";
-import { useRef, useState } from "react";
 
 function App() {
-  const [todos, setTodos] = useState([]);
+  const [todos, setTodos] = useState(() => {
+    try {
+      const saved = localStorage.getItem("todos");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  const inputRef = useRef();
-  const handleAddButton = () => {
-    const text = inputRef.current.value;
-    const newItem = { completed: false, text };
-    setTodos([...todos, newItem]);
-    inputRef.current.value = "";
+  const [inputValue, setInputValue] = useState("");
+  const inputRef = useRef(null);
+
+  // حفظ التودوهات في localStorage كل ما يتغيروا
+  useEffect(() => {
+    localStorage.setItem("todos", JSON.stringify(todos));
+  }, [todos]);
+
+  const handleAddTodo = useCallback(() => {
+    const trimmedText = inputValue.trim();
+
+    if (!trimmedText) {
+      alert("Please enter a valid todo item");
+      inputRef.current?.focus();
+      return;
+    }
+
+    const newTodo = {
+      id: crypto.randomUUID(), // أفضل بكتير من index
+      text: trimmedText,
+      completed: false,
+      createdAt: Date.now(),
+    };
+
+    setTodos((prev) => [newTodo, ...prev]); // إضافة في البداية (أحدث أولاً)
+    setInputValue("");
+    inputRef.current?.focus();
+  }, [inputValue]);
+
+  const handleToggleComplete = useCallback((id) => {
+    setTodos((prev) =>
+      prev.map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+      ),
+    );
+  }, []);
+
+  const handleDelete = useCallback((id) => {
+    setTodos((prev) => prev.filter((todo) => todo.id !== id));
+  }, []);
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleAddTodo();
+    }
   };
 
-  const handleItemDone = (index) => {
-    const newTodos = [...todos];
-    newTodos[index].completed = !newTodos[index].completed;
-    setTodos(newTodos);
-  };
-  const handleDeleteItem = (index) => {
-    const newTodos = [...todos];
-    newTodos.splice(index, 1);
-    setTodos(newTodos);
-  };
-  console.log(todos);
   return (
-    <div className="App">
-      <div>
-        <h2>ToDo List</h2>
-        <div className="todos-container">
-          <ul>
-            {todos.map(({ text, completed }, index) => {
-              return (
-                <div className="item">
-                  <li
-                    key={index}
-                    className={completed ? "done" : ""}
-                    onClick={() => handleItemDone(index)}
-                  >
-                    {text}
-                  </li>
-                  <span
-                    className="delete"
-                    onClick={() => handleDeleteItem(index)}
-                  >
-                    ❌
-                  </span>
-                </div>
-              );
-            })}
-          </ul>
+    <div className="app-container">
+      <div className="todo-app">
+        <h1>To-Do List</h1>
+
+        <div className="input-section">
+          <input
+            ref={inputRef}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="What needs to be done?"
+            autoFocus
+          />
+          <button onClick={handleAddTodo}>Add</button>
         </div>
-        <input ref={inputRef} placeholder="Enter Item..." />
-        <button onClick={handleAddButton}>Add</button>
+
+        <div className="todos-list">
+          {todos.length === 0 ? (
+            <p className="empty-state">No tasks yet. Add one! ✨</p>
+          ) : (
+            <ul>
+              {todos.map((todo) => (
+                <li key={todo.id} className={todo.completed ? "completed" : ""}>
+                  <div
+                    className="todo-text"
+                    onClick={() => handleToggleComplete(todo.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        handleToggleComplete(todo.id);
+                      }
+                    }}
+                  >
+                    {todo.text}
+                  </div>
+
+                  <button
+                    className="delete-btn"
+                    onClick={() => handleDelete(todo.id)}
+                    aria-label={`Delete "${todo.text}"`}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {todos.length > 0 && (
+          <div className="stats">
+            {todos.filter((t) => t.completed).length} / {todos.length} done
+          </div>
+        )}
       </div>
     </div>
   );
