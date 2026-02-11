@@ -106,7 +106,7 @@ function App() {
       </div>
 
       <footer className="footer">
-        Designed & Built by <b>Ali Maher</b>
+        Designed & Built by <b>Ali Maher Mohamed</b>
       </footer>
     </div>
   );
